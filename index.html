@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>캐릭터 투표</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f2f2; --ink:#1d1a1b; --sub:#746d6f; --line:#ebe5e6;
+    --accent:#d0506f; --accent-soft:#fdf0f3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo",sans-serif;
+       font-size:16px;line-height:1.7;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased}
+  img{display:block;max-width:100%}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 max(20px, env(safe-area-inset-left))}
+
+  /* 소개 */
+  .intro{padding:64px 0 36px}
+  .intro h1{font-size:30px;font-weight:700;letter-spacing:-0.03em;margin-bottom:16px}
+  .intro p{color:var(--sub);font-size:17px}
+
+  /* 1단계: A·B·C 고르기 */
+  .picks{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .pick{all:unset;box-sizing:border-box;cursor:pointer;border:2px solid var(--line);border-radius:18px;overflow:hidden;
+        display:flex;flex-direction:column;background:var(--bg);transition:border-color .15s, box-shadow .15s}
+  .pick:hover{border-color:#d8cdd0}
+  .pick:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .pick img{width:100%;aspect-ratio:1/1;object-fit:cover}
+  .pick .foot{display:flex;align-items:center;justify-content:space-between;padding:14px 18px}
+  .pick .foot b{font-size:24px;font-weight:700}
+  .radio{width:26px;height:26px;border-radius:50%;border:2px solid #d8cdd0;display:grid;place-items:center;transition:all .15s}
+  .radio::after{content:"";width:12px;height:12px;border-radius:50%;background:#fff;opacity:0}
+  .pick[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .pick[aria-checked="true"] .radio{background:var(--accent);border-color:var(--accent)}
+  .pick[aria-checked="true"] .radio::after{opacity:1}
+  .hint{margin-top:16px;font-size:14px;color:var(--sub)}
+  .hint a{color:var(--ink);font-weight:600;text-underline-offset:3px}
+
+  /* 2단계: 자세히 보기 */
+  .detail-head{margin-top:88px;padding-top:24px;border-top:1px solid var(--line)}
+  .detail-head h2{font-size:22px;font-weight:700;letter-spacing:-0.02em}
+  .detail-head p{color:var(--sub);font-size:15px;margin-top:4px}
+  .tabs{display:flex;gap:8px;margin-top:20px;position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:5}
+  .tab{all:unset;cursor:pointer;padding:9px 22px;border-radius:999px;border:1.5px solid var(--line);font-weight:600;font-size:15px}
+  .tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  .detail{display:grid;grid-template-columns:1fr 375px;gap:40px;align-items:start;margin-top:20px}
+  .detail .left{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .detail .left img{width:100%;border-radius:14px}
+  .detail .label{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:-8px}
+  .detail .home{background:var(--panel);border-radius:18px;padding:28px 0;display:flex;justify-content:center}
+  .detail .home img{width:100%;max-width:375px}
+  .choose{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;padding:14px;border-radius:12px;
+          border:1.5px solid var(--accent);color:var(--accent);font-weight:600}
+  .choose[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .choose:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  /* 하단 투표 바 */
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);
+       border-top:1px solid var(--line);padding:14px 0 calc(14px + env(safe-area-inset-bottom));z-index:10}
+  .bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .bar .msg{font-size:15px;color:var(--sub)}
+  .bar .msg b{color:var(--ink)}
+  .go{all:unset;cursor:pointer;background:var(--accent);color:#fff;font-weight:700;font-size:16px;
+      padding:14px 34px;border-radius:12px;white-space:nowrap}
+  .go:disabled,.go[aria-disabled="true"]{background:var(--line);color:var(--sub);cursor:default}
+  .go:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .spacer{height:120px}
+
+  /* 완료 */
+  .done{position:fixed;inset:0;background:rgba(29,26,27,.45);display:grid;place-items:center;z-index:20;padding:20px}
+  .done[hidden]{display:none}
+  .done .box{background:#fff;border-radius:20px;padding:36px 32px;max-width:360px;width:100%;text-align:center}
+  .done img{width:120px;height:120px;object-fit:cover;border-radius:50%;margin:0 auto 18px}
+  .done h3{font-size:20px;margin-bottom:8px}
+  .done p{color:var(--sub);font-size:15px}
+  .done button{all:unset;cursor:pointer;margin-top:22px;padding:12px 28px;border-radius:10px;background:var(--ink);color:#fff;font-weight:600}
+
+  @media (max-width:820px){
+    .intro{padding:40px 0 28px}
+    .intro h1{font-size:25px}
+    .intro p{font-size:16px}
+    .picks{gap:10px}
+    .pick{border-radius:14px}
+    .pick .foot{padding:10px 12px}
+    .pick .foot b{font-size:19px}
+    .radio{width:22px;height:22px}
+    .detail{grid-template-columns:1fr;gap:20px}
+    .detail-head{margin-top:56px}
+    .go{padding:13px 24px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <section class="intro">
+    <h1>캐릭터 투표</h1>
+    <p>안녕하세요.<br>
+       널싱랩과 함께할 새로운 서비스를 준비하고 있습니다.<br>
+       이 서비스를 대표할 캐릭터를 찾고 있습니다.<br>
+       가장 마음에 드는 캐릭터 하나에 투표해 주세요.</p>
+  </section>
+
+  <div class="picks" role="radiogroup" aria-label="캐릭터 고르기">
+    <button class="pick" role="radio" aria-checked="false" data-id="A">
+      <img src="img/pink-main.jpg" alt="A 캐릭터" style="object-position:50% 50%">
+      <div class="foot"><b>A</b><span class="radio"></span></div>
+    </button>
+    <button class="pick" role="radio" aria-checked="false" data-id="B">
+      <img src="img/lash-main.jpg" alt="B 캐릭터">
+      <div class="foot"><b>B</b><span class="radio"></span></div>
+    </button>
+    <button class="pick" role="radio" aria-checked="false" data-id="C">
+      <img src="img/white-main.jpg" alt="C 캐릭터">
+      <div class="foot"><b>C</b><span class="radio"></span></div>
+    </button>
+  </div>
+  <p class="hint">캐릭터를 누르면 선택됩니다. 표정과 앱 화면은 <a href="#detail">아래에서 자세히</a> 볼 수 있습니다.</p>
+
+  <section class="detail-head" id="detail">
+    <h2>자세히 보기</h2>
+    <p>캐릭터별 표정과 앱 화면에 넣은 모습입니다.</p>
+  </section>
+
+  <div class="tabs" role="tablist" aria-label="캐릭터">
+    <button class="tab" role="tab" aria-selected="true" data-id="A">A</button>
+    <button class="tab" role="tab" aria-selected="false" data-id="B">B</button>
+    <button class="tab" role="tab" aria-selected="false" data-id="C">C</button>
+  </div>
+
+  <div class="detail" data-id="A">
+    <div class="left">
+      <div class="label">표정</div>
+      <img src="img/pink-face.jpg" alt="A 캐릭터 표정">
+      <button class="choose" aria-pressed="false" data-id="A">A 선택하기</button>
+    </div>
+    <div class="home"><img src="img/pink-home.webp" alt="A 캐릭터를 넣은 앱 홈 화면"></div>
+  </div>
+  <div class="detail" data-id="B" hidden>
+    <div class="left">
+      <div class="label">표정</div>
+      <img src="img/lash-face.jpg" alt="B 캐릭터 표정">
+      <button class="choose" aria-pressed="false" data-id="B">B 선택하기</button>
+    </div>
+    <div class="home"><img src="img/lash-home.webp" alt="B 캐릭터를 넣은 앱 홈 화면"></div>
+  </div>
+  <div class="detail" data-id="C" hidden>
+    <div class="left">
+      <div class="label">표정</div>
+      <img src="img/white-face.jpg" alt="C 캐릭터 표정">
+      <button class="choose" aria-pressed="false" data-id="C">C 선택하기</button>
+    </div>
+    <div class="home"><img src="img/white-home.webp" alt="C 캐릭터를 넣은 앱 홈 화면"></div>
+  </div>
+
+  <div class="spacer"></div>
+</div>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="msg" id="msg" role="status">마음에 드는 캐릭터를 골라 주세요.</div>
+    <button class="go" id="go" aria-disabled="true">투표하기</button>
+  </div>
+</div>
+
+<div class="done" id="done" hidden role="dialog" aria-modal="true" aria-labelledby="done-title">
+  <div class="box">
+    <img id="done-img" src="" alt="">
+    <h3 id="done-title">투표가 완료되었습니다.</h3>
+    <p id="done-text">참여해 주셔서 감사합니다.</p>
+    <button id="done-close">닫기</button>
+  </div>
+</div>
+
+<script>
+/* ── 투표함 연결: 구글 설문지 ─────────────────────────────
+   formAction : 설문지 주소의 /viewform 을 /formResponse 로 바꾼 것
+   entry      : 질문 칸 번호 (예: "entry.123456789")
+   설문 질문의 선택지는 A, B, C 그대로 */
+const CONFIG = {
+  formAction: '',
+  entry: ''
+};
+
+const IMG = { A: 'img/pink-main.jpg', B: 'img/lash-main.jpg', C: 'img/white-main.jpg' };
+let picked = null, sending = false;
+let voted = null;
+try { voted = localStorage.getItem('nl-char-vote'); } catch (e) {}
+
+const $msg = document.getElementById('msg');
+const $go = document.getElementById('go');
+
+function render() {
+  document.querySelectorAll('.pick').forEach(el => el.setAttribute('aria-checked', String(el.dataset.id === picked)));
+  document.querySelectorAll('.choose').forEach(el => {
+    const on = el.dataset.id === picked;
+    el.setAttribute('aria-pressed', String(on));
+    el.textContent = on ? el.dataset.id + ' 선택됨' : el.dataset.id + ' 선택하기';
+  });
+  const ready = picked && !sending;
+  $go.setAttribute('aria-disabled', String(!ready));
+  $go.textContent = sending ? '보내는 중…' : (picked ? picked + '에 투표하기' : '투표하기');
+  if (sending) return;
+  if (voted && !picked) $msg.innerHTML = '이미 <b>' + voted + '</b>에 투표했습니다.';
+  else if (picked) $msg.innerHTML = '<b>' + picked + '</b>를 골랐습니다.';
+  else $msg.textContent = '마음에 드는 캐릭터를 골라 주세요.';
+}
+
+function pick(id) { picked = id; render(); }
+
+document.querySelectorAll('.pick, .choose').forEach(el => el.addEventListener('click', () => pick(el.dataset.id)));
+
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.id === id)));
+  document.querySelectorAll('.detail').forEach(d => d.hidden = d.dataset.id !== id);
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.id)));
+
+$go.addEventListener('click', async () => {
+  if (!picked || sending) return;
+  if (!CONFIG.formAction || !CONFIG.entry) {
+    $msg.textContent = '아직 투표함이 연결되지 않았습니다.';
+    return;
+  }
+  sending = true; render();
+  try {
+    await fetch(CONFIG.formAction, {
+      method: 'POST', mode: 'no-cors',
+      body: new URLSearchParams({ [CONFIG.entry]: picked })
+    });
+    voted = picked;
+    try { localStorage.setItem('nl-char-vote', voted); } catch (e) {}
+    document.getElementById('done-img').src = IMG[voted];
+    document.getElementById('done-text').textContent = voted + '에 투표했습니다. 참여해 주셔서 감사합니다.';
+    document.getElementById('done').hidden = false;
+    document.getElementById('done-close').focus();
+    picked = null;
+  } catch (e) {
+    $msg.textContent = '전송에 실패했습니다. 잠시 후 다시 눌러 주세요.';
+    sending = false; return;
+  }
+  sending = false; render();
+});
+
+document.getElementById('done-close').addEventListener('click', () => { document.getElementById('done').hidden = true; });
+render();
+</script>
+</body>
+</html>
