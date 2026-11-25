@@ -183,10 +183,10 @@
 /* ── 투표함 연결: 구글 설문지 ─────────────────────────────
    formAction : 설문지 주소의 /viewform 을 /formResponse 로 바꾼 것
    entry      : 질문 칸 번호 (예: "entry.123456789")
-   설문 질문의 선택지는 A, B, C 그대로 */
+   설문 질문의 선택지는 A안, B안, C안 (페이지는 picked + '안' 을 보냄) */
 const CONFIG = {
-  formAction: '',
-  entry: ''
+  formAction: 'https://docs.google.com/forms/d/e/1FAIpQLSdDV4s-9kaSyYp10p8mqWIeUtuJaaxgS8w9A1UiHd3aZwEnpg/formResponse',
+  entry: 'entry.1735767534'
 };
 
 const IMG = { A: 'img/pink-main.jpg', B: 'img/lash-main.jpg', C: 'img/white-main.jpg' };
@@ -233,7 +233,7 @@ $go.addEventListener('click', async () => {
   try {
     await fetch(CONFIG.formAction, {
       method: 'POST', mode: 'no-cors',
-      body: new URLSearchParams({ [CONFIG.entry]: picked })
+      body: new URLSearchParams({ [CONFIG.entry]: picked + '안' })
     });
     voted = picked;
     try { localStorage.setItem('nl-char-vote', voted); } catch (e) {}
